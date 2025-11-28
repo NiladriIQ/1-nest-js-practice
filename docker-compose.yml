@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: my_postgres_db # Optional: Assign a custom container name
+    # restart: unless-stopped # Ensure the container restarts automatically if it stops
+    environment:
+      - POSTGRES_DB=nest-practice
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=P@ss1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nest-practice"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: niladrihtpl/nest-practice-api:0.0.1.RELEASE
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=3000
+  #     - DATABASE_URL=postgres://postgres:postgres@postgres:5432/nest-practice
+  #   ports:
+  #     - "3000:3000"
+  #   restart: unless-stopped
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  pgdata:
+
