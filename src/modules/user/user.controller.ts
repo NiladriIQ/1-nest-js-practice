@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Query,
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
 
 @Controller('users')
 export class UserController {
@@ -16,10 +17,9 @@ export class UserController {
 
   @Get()
   getUsers(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query() paginationQueryDto: PaginationQueryDto,
   ) {
-    return this.userService.getAllUsers(page, limit);
+    return this.userService.getAllUsers(paginationQueryDto);
   }
 
   @Get(':id')

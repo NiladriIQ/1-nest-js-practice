@@ -9,6 +9,7 @@ import { HashtagService } from '../hashtag/hashtag.service';
 import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
 import { GetTweetQueryDto } from './dto/get-tweet-query.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
+import { Paginated } from 'src/common/pagination/paginater.interface';
 
 @Injectable()
 export class TweetService {
@@ -36,21 +37,17 @@ export class TweetService {
     return await this.tweetRepository.save(newTweet);
   }
 
-  public async getTweets(userId: number, pageQueryDto: PaginationQueryDto) {
-    const { page, limit } = pageQueryDto;
-
+  public async getTweets(userId: number, pageQueryDto: PaginationQueryDto): Promise<Paginated<Tweet>> {
     // Find the user with the given userId
     const user = await this.userService.getUserById(userId);
     if (!user) throw new NotFoundException(`User with id ${userId} is not found`);
 
     // Find the tweets with the given user
-    const paginatedTweets = await this.paginationProvider.paginateQuery(
+    return await this.paginationProvider.paginateQuery(
       pageQueryDto, 
       this.tweetRepository,
       { user: { id: userId } }
     );
-
-    return paginatedTweets;
   }
 
   public async updateTweetById(id: number, tweetDto: UpdateTweetDto) {

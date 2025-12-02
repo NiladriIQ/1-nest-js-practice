@@ -8,16 +8,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Profile } from '../profile/entities/profile.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserAlreadyExistsException } from 'src/CustomExceptions/user-already-exists.exception';
+import { PaginationProvider } from 'src/common/pagination/pagination.provider';
+import { Paginated } from 'src/common/pagination/paginater.interface';
+import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Profile)
-    private readonly profileRepository: Repository<Profile>,
-
-    private readonly configService: ConfigService,
+    private readonly paginationProvider: PaginationProvider,
   ) { }
 
   public async createUser(userDto: CreateUserDto) {
@@ -52,11 +52,14 @@ export class UserService {
     }
   }
 
-  public async getAllUsers(page: number, limit: number) {
+  public async getAllUsers(pageQueryDto: PaginationQueryDto): Promise<Paginated<User>> {
     try {
-      return await this.userRepository.find({
-        relations: { profile: true },
-      });
+      return await this.paginationProvider.paginateQuery(
+        pageQueryDto,
+        this.userRepository,
+        undefined,
+        ['profile']
+      );
     } catch (error) {
       if (error.code === 'ECONNREFUSED') {
         throw new RequestTimeoutException('An error has occurred. Please try again later.', {
@@ -64,6 +67,7 @@ export class UserService {
         });
       }
       console.log(error);
+      throw error;
     }
   }
 
