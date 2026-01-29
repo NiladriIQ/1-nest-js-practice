@@ -11,6 +11,7 @@ import { PaginationModule } from 'src/common/pagination/pagination.module';
   imports: [
     TypeOrmModule.forFeature([User, Profile]),
     PaginationModule,
+    forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
   providers: [UserService],

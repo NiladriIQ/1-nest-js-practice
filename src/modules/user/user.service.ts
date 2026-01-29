@@ -11,6 +11,7 @@ import { UserAlreadyExistsException } from 'src/CustomExceptions/user-already-ex
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { Paginated } from 'src/common/pagination/paginater.interface';
 import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
+import { HasingProvider } from '../auth/provider/hasing.provider';
 
 @Injectable()
 export class UserService {
@@ -18,6 +19,9 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly paginationProvider: PaginationProvider,
+
+    @Inject(forwardRef(() => HasingProvider))
+    private readonly hasingProvider: HasingProvider,
   ) { }
 
   public async createUser(userDto: CreateUserDto) {
@@ -36,8 +40,12 @@ export class UserService {
       });
       if (existingUserWithEmail) throw new UserAlreadyExistsException('email', userDto.email);
 
-      // Create a User Object
-      const newUser = this.userRepository.create(userDto);
+      // Hash the password and create a User Object
+      const hashedPassword = await this.hasingProvider.hashPassword(userDto.password);
+      const newUser = this.userRepository.create({
+        ...userDto,
+        password: hashedPassword
+      });
 
       // Save the user object
       return await this.userRepository.save(newUser);
