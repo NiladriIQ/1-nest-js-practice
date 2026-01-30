@@ -1,4 +1,4 @@
-import { BadRequestException, forwardRef, HttpException, HttpStatus, Inject, Injectable, RequestTimeoutException } from '@nestjs/common';
+import { BadRequestException, forwardRef, HttpException, HttpStatus, Inject, Injectable, RequestTimeoutException, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthService } from '../auth/auth.service';
@@ -20,7 +20,7 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     private readonly paginationProvider: PaginationProvider,
 
-    @Inject(forwardRef(() => HasingProvider))
+    // @Inject(forwardRef(() => HasingProvider))
     private readonly hasingProvider: HasingProvider,
   ) { }
 
@@ -34,7 +34,7 @@ export class UserService {
         where: { username: userDto.username },
       });
       if (existingUserWithUsername) throw new UserAlreadyExistsException('username', userDto.username);
-      
+
       const existingUserWithEmail = await this.userRepository.findOne({
         where: { email: userDto.email },
       });
@@ -83,7 +83,7 @@ export class UserService {
     try {
       // Find the user by id
       const user = await this.userRepository.findOneBy({ id });
-  
+
       if (!user) throw new HttpException({
         statusCode: HttpStatus.NOT_FOUND,
         error: `User with id ${id} was not found`,
@@ -91,15 +91,29 @@ export class UserService {
       }, HttpStatus.NOT_FOUND, {
         description: `The exception occured because the user with id ${id} was not found`,
       });
-  
+
       return user;
-      
+
     } catch (error) {
       throw error;
     }
   }
 
-  updateUserById(id: number, updateUserDto: UpdateUserDto) {
+  public async findByUsername(username: string) {
+    let user: User | null = null;
+
+    try {
+      user = await this.userRepository.findOneBy({ username });
+    } catch (error) {
+      throw new RequestTimeoutException(error, {
+        description: `Could not find the user with username ${username}`,
+      });
+    }
+    if (!user) throw new UnauthorizedException('User does not exist!');
+    return user;
+  }
+
+  public async updateUserById(id: number, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
   }
 

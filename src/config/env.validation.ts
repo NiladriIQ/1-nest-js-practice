@@ -12,5 +12,5 @@ export default Joi.object({
     DB_SYNC: Joi.boolean().default(false),
     AUTO_LOAD: Joi.boolean().default(false),
     JWT_SECRET: Joi.string().required(),
-    JWT_EXPIRES_IN: Joi.string().required(),
+    JWT_EXPIRES_IN: Joi.string().default(3600),
 })
