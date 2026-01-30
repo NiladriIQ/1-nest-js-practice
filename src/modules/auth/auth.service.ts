@@ -1,10 +1,13 @@
-import { forwardRef, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import authConfig from './config/auth.config';
 import type { ConfigType } from '@nestjs/config';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { HasingProvider } from './provider/hasing.provider';
+import { JwtService } from '@nestjs/jwt';
+import { User } from '../user/entities/user.entity';
+import { ActiveUserType } from './interfaces/active-user-type.interface';
 
 @Injectable()
 export class AuthService {
@@ -13,34 +16,49 @@ export class AuthService {
     private readonly auth: ConfigType<typeof authConfig>,
     private readonly userService: UserService,
     private readonly hasingProvider: HasingProvider,
+    private readonly jwtService: JwtService,
   ) { }
 
-  isAuthenticated: boolean = false;
+  async signup(userDto: CreateUserDto) {
+    return await this.userService.createUser(userDto);
+  }
 
   async login(loginDto: LoginDto) {
-    console.log(this.auth);
-
     // Find the user by username
     const user = await this.userService.findByUsername(loginDto.username);
-    // if (!user) throw new UnauthorizedException('Invalid username or password');
 
     // If the user exists, compare the password
     const isPasswordCorrect = await this.hasingProvider.comparePassword(loginDto.password, user.password);
-    if(!isPasswordCorrect) throw new UnauthorizedException('Incorrect password');
+    if (!isPasswordCorrect) throw new UnauthorizedException('Incorrect password');
 
-    // If the password is correct, LOGIN SUCCESS - generate & return access token
-    // const accessToken = this.generateAccessToken({ userId: user.id, username: user.username, email: user.email });
-
-    // Return the token
-    return {
-      message: 'Login successful',
-      token: '1234567890',
-    };
+    // If the password is correct, LOGIN SUCCESS - generate and return access & refresh tokens
+    return await this.generateToken(user);
   }
 
-  async signup(userDto: CreateUserDto) {
-    console.log(this.auth);
+  private async signToken<T>(userId: number, expiresIn: number, payload?: T) {
+    return await this.jwtService.signAsync({ sub: userId, ...payload }, {
+      secret: this.auth.secret,
+      expiresIn,
+      audience: this.auth.signOptions.audience,
+      issuer: this.auth.signOptions.issuer,
+    });
+  }
 
-    return await this.userService.createUser(userDto);
+  private async generateToken(user: User) {
+    // Generate an access token
+    const accessToken = await this.signToken<Partial<ActiveUserType>>(
+      user.id,
+      this.auth.accessTokenExpiresIn,
+      { email: user.email }
+    );
+
+    // Generate a refresh token
+    const refreshToken = await this.signToken<Partial<ActiveUserType>>(
+      user.id,
+      this.auth.refreshTokenExpiresIn,
+    );
+
+    // Return the tokens
+    return { accessToken, refreshToken };
   }
 }

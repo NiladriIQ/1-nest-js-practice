@@ -79,7 +79,7 @@ export class UserService {
     }
   }
 
-  public async getUserById(id: number) {
+  public async getUserById(id: number): Promise<User> {
     try {
       // Find the user by id
       const user = await this.userRepository.findOneBy({ id });
@@ -99,7 +99,7 @@ export class UserService {
     }
   }
 
-  public async findByUsername(username: string) {
+  public async findByUsername(username: string): Promise<User> {
     let user: User | null = null;
 
     try {

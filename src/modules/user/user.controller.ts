@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Query, DefaultValuePipe, ParseBoolPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Query, DefaultValuePipe, ParseBoolPipe, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
+import { AuthorizeGuard } from '../auth/guards/authorize.guard';
 
 @Controller('users')
+// @UseGuards(AuthorizeGuard)
 export class UserController {
   constructor(
     private readonly userService: UserService,

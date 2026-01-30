@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, RequestTimeoutException } from '@nestjs/common';
 import { CreateTweetDto } from './dto/create-tweet.dto';
 import { UpdateTweetDto } from './dto/update-tweet.dto';
 import { UserService } from '../user/user.service';
@@ -7,9 +7,10 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { HashtagService } from '../hashtag/hashtag.service';
 import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
-import { GetTweetQueryDto } from './dto/get-tweet-query.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { Paginated } from 'src/common/pagination/paginater.interface';
+import { User } from '../user/entities/user.entity';
+import { Hashtag } from '../hashtag/entities/hashtag.entity';
 
 @Injectable()
 export class TweetService {
@@ -21,20 +22,31 @@ export class TweetService {
     private readonly paginationProvider: PaginationProvider,
   ) { }
 
-  public async createTweet(createTweetDto: CreateTweetDto) {
-    // Find the user with the given userId
-    const user = await this.userService.getUserById(createTweetDto.userId);
-    if (!user) throw new Error(`User with id ${createTweetDto.userId} not found`);
+  public async createTweet(createTweetDto: CreateTweetDto, userId: number) {
+    let user: User | undefined = undefined;
+    let hashtags: Hashtag[] | undefined = undefined;
+    try {
+      // Find the user with the given userId
+      user = await this.userService.getUserById(userId);
 
-    // Find the hashtags with the given ids
-    const hashtags = await this.hashtagService.findHashtags(createTweetDto.hashtags ?? []);
+      // Find the hashtags with the given ids
+      if (createTweetDto.hashtags) {
+        hashtags = await this.hashtagService.findHashtags(createTweetDto.hashtags ?? []);
+      }
+    } catch (error) {
+      throw new RequestTimeoutException();
+    }
+    if (createTweetDto.hashtags?.length != hashtags?.length) throw new BadRequestException();
 
     // Create a new tweet with the given user and hashtags
-    const { userId, ...tweetData } = createTweetDto;
-    const newTweet = this.tweetRepository.create({ ...tweetData, user, hashtags });
+    const newTweet = this.tweetRepository.create({ ...createTweetDto, user, hashtags });
 
-    // Save & return the tweet
-    return await this.tweetRepository.save(newTweet);
+    try {
+      // Save & return the tweet
+      return await this.tweetRepository.save(newTweet);
+    } catch (error) {
+      throw new ConflictException(error);
+    }
   }
 
   public async getTweets(userId: number, pageQueryDto: PaginationQueryDto): Promise<Paginated<Tweet>> {
@@ -44,7 +56,7 @@ export class TweetService {
 
     // Find the tweets with the given user
     return await this.paginationProvider.paginateQuery(
-      pageQueryDto, 
+      pageQueryDto,
       this.tweetRepository,
       { user: { id: userId } }
     );

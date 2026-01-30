@@ -1,17 +1,22 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
-import { ConfigModule } from '@nestjs/config';
 import { HasingProvider } from './provider/hasing.provider';
 import { BcryptProvider } from './provider/bcrypt.provider';
 import authConfig from './config/auth.config';
-import { JwtModule } from '@nestjs/jwt';
+import { AuthorizeGuard } from './guards/authorize.guard';
 
 @Module({
   imports: [
     ConfigModule.forFeature(authConfig),
-    JwtModule.registerAsync(authConfig.asProvider()),
+    JwtModule.registerAsync({
+      global: true,
+      ...authConfig.asProvider(),
+    }),
     forwardRef(() => UserModule),
   ],
   controllers: [AuthController],
@@ -19,8 +24,12 @@ import { JwtModule } from '@nestjs/jwt';
     AuthService,
     {
       provide: HasingProvider,
-      useClass: BcryptProvider
-    }
+      useClass: BcryptProvider,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthorizeGuard,
+    },
   ],
   exports: [AuthService, HasingProvider],
 })

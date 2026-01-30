@@ -9,9 +9,9 @@ import { PaginationModule } from 'src/common/pagination/pagination.module';
 
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     TypeOrmModule.forFeature([User, Profile]),
     PaginationModule,
-    forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
   providers: [UserService],
